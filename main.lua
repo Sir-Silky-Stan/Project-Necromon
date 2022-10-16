@@ -14,12 +14,90 @@ function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     love.graphics.setNewFont(12)
 
-    local sti = require 'libraries/sti'
-    local game_map = sti('maps/testingmap.lua')
+    sti = require 'libraries/sti'
+    anim8 = require 'libraries/anim8'
+    camera = require 'libraries/camera'
+
+    cam = camera()
+
+    gamemap = sti('maps/testmap.lua')
+
+    player = {}
+    player.x = 64
+    player.y = 64
+    player.speed = 5
+    player.sprite = love.graphics.newImage('sprites/test-guy.png')
+    player.grid = anim8.newGrid( 12, 18, player.sprite:getWidth(), player.sprite:getHeight() )
+
+    player.frames = {}
+    player.frames.down = anim8.newAnimation( player.grid('1-4', 1), 0.2 )
+    player.frames.left = anim8.newAnimation( player.grid('1-4', 2), 0.2 )
+    player.frames.right = anim8.newAnimation( player.grid('1-4', 3), 0.2 )
+    player.frames.up = anim8.newAnimation( player.grid('1-4', 4), 0.2 )
+    
+    player.current = player.frames.left
 
 end
 
 function love.update(dt)
+
+    local ismoving = false
+
+    if game.state['running'] then
+        if love.keyboard.isDown('d') then
+            player.x = player.x + player.speed
+            player.current = player.frames.right
+            ismoving = true
+        end
+
+        if love.keyboard.isDown('a') then
+            player.x = player.x - player.speed
+            player.current = player.frames.left
+            ismoving = true
+        end
+
+        if love.keyboard.isDown('s') then
+            player.y = player.y + player.speed
+            player.current = player.frames.down
+            ismoving = true
+        end
+
+        if love.keyboard.isDown('w') then
+            player.y = player.y - player.speed
+            player.current = player.frames.up
+            ismoving = true
+        end
+
+        if ismoving == false then
+            player.current:gotoFrame(2)
+        end
+
+        player.current:update(dt)
+
+        cam:lookAt(player.x, player.y)
+
+        local gamew = love.graphics.getWidth()
+        local gameh = love.graphics.getHeight()
+
+        if cam.x < gamew/2 then
+            cam.x = gamew/2
+        end
+
+        if cam.y < gameh/2 then
+            cam.y = gameh/2
+        end
+
+        local mapw = gamemap.width * gamemap.tilewidth
+        local maph = gamemap.height * gamemap.tileheight
+
+        if cam.x > (mapw - gamew/2) then
+            cam.x = (mapw - gamew/2)
+        end
+
+        if cam.y > (maph - gameh/2) then
+            cam.y = (maph - gameh/2)
+        end
+    end
 end
 
 function love.draw()
@@ -36,8 +114,12 @@ function love.draw()
             end
         end
     elseif game.state['running'] then
-        love.graphics.print("starting game", 64, 64)
-        game_map:draw()
+        cam:attach()
+            love.graphics.print("starting game", 64, 64)
+            gamemap:drawLayer(gamemap.layers['ground'])
+            gamemap:drawLayer(gamemap.layers['Tile Layer 2'])
+            player.current:draw(player.sprite, player.x, player.y, nil, 5, nil, 6, 9)
+        cam:detach()
     end
 end    
     
